@@ -6,8 +6,6 @@
     */
     int ledPin = 13;  // LED is attached to digital pin 13
 
-    hello
-
     // Force sensor code
     int forcePin0 = A0; // Analog Pin 0 
     int interruptDriverPin = 8; // Pin to 
