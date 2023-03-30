@@ -144,7 +144,7 @@ int statusInterrupt = 0;
       }
 
       // At the end of the setup loop, attach the interrupt (not before though because we don't want to randomly trigger ISR)
-      attachInterrupt(interruptPin, readFootPosition, CHANGE); // will sense changes from 1 to 0 OR 0 to 1 (required for our application)      
+      attachInterrupt(interruptPin, interruptHandler, CHANGE); // will sense changes from 1 to 0 OR 0 to 1 (required for our application)      
     }
     
     void loop() {
@@ -152,12 +152,32 @@ int statusInterrupt = 0;
       Serial.println(heelSensorVal); 
       Serial.print("force reading (lowerBoxSensor): "); // Debug statement
       Serial.println(lowerBoxSensorVal); 
+
       statusInterrupt = digitalRead(interruptPin);
       Serial.print("Interrupt pin (2): "); // Debug statement
-      Serial.println(statusInterrupt); 
+      Serial.println(statusInterrupt); // Debug statement 
+      // TODO: add some sort of logic that checks if its the very start of the session, and goes to read the pins using readFootPosition()
+  
+      if(heelSensorVal && ballSensorVal && !lowerBoxSensorVal && !higherBoxSensorVal) { // flat foot
+        Serial.println("Flat");
 
-      
-      delay(500);
+      } else if (!heelSensorVal && ballSensorVal && !lowerBoxSensorVal && !higherBoxSensorVal) { // demi
+        Serial.println("Demi-pointe");
+
+      } else if(!heelSensorVal && !ballSensorVal && lowerBoxSensorVal && !higherBoxSensorVal) { // lower box
+        Serial.println("Lower box - almost there!");
+
+      } else if(!heelSensorVal && !ballSensorVal && lowerBoxSensorVal && higherBoxSensorVal) { // full box
+        Serial.println("Full box");
+
+      } else {
+        Serial.println("Keep Trying :)");
+
+      } 
+    }
+    
+    void interruptHandler() {
+      readFootPosition();
     }
 
     void readFootPosition() {
@@ -167,3 +187,5 @@ int statusInterrupt = 0;
       lowerBoxSensorVal = digitalRead(lowerBoxSensor);
       higherBoxSensorVal = digitalRead(higherBoxSensor);
     }
+
+    void 
