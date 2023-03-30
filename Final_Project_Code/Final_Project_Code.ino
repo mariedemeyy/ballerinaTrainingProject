@@ -18,21 +18,21 @@
     // int interruptDriverPin = 8; // Pin to 
 
     // DIGITAL FORCE READING PINS (THIS WILL CONNECT FROM THE "Y" IN OUR QUAD 2-INPUT AND)
-    int blue0 = 9; // Digital Pin 9 for 0
-    int yellow1 = 10; // Digital Pin 10 for 1
-    int green2 = 11; // Digital Pin 11 for 2
-    int white3 = 12; // Digital Pin 12 for 3
+    int heelSensor = 11; // Digital Pin 9 for 0
+    // int yellow1 = 10; // Digital Pin 10 for 1
+    // int green2 = 11; // Digital Pin 11 for 2
+    int frontBoxSensor = 10; // Digital Pin 12 for 3
 
-    volatile int blue0Val = 0; // BOX SENSOR
-    volatile int yellow1Val = 0;
-    volatile int green2Val = 0;
-    volatile int white3Val = 0; //  HEEL SENSOR
+    volatile int heelSensorVal = 0; // BOX SENSOR
+    // volatile int yellow1Val = 0;
+    // volatile int green2Val = 0;
+    volatile int frontBoxSensorVal = 0; //  HEEL SENSOR
 
     void setup() {   
-      pinMode(blue0, INPUT); 
-      pinMode(yellow1, INPUT);
-      pinMode(green2, INPUT);
-      pinMode(white3, INPUT);            
+      pinMode(heelSensor, INPUT); 
+      // pinMode(yellow1, INPUT);
+      // pinMode(green2, INPUT);
+      pinMode(frontBoxSensor, INPUT);            
       // pinMode(ledPin, OUTPUT);
 
       // OLD IDEA:
@@ -54,8 +54,8 @@
       Serial.begin(9600);  //turn on serial communication
       
       // DEBUG SERIAL STATEMENTS
-      Serial.println("");
-      Serial.println(debugInterruptCounter, DEC);
+      // Serial.println("");
+      // Serial.println(debugInterruptCounter, DEC);
     }
     
     void loop() {
@@ -66,15 +66,15 @@
       // int white3Val = digitalRead(white3); //  HEEL SENSOR
 
       // Read the analog value
-      Serial.print("force reading (blue0): "); // Debug statement
-      Serial.println(blue0Val); 
-      Serial.print("force reading (yellow1): "); // Debug statement
-      Serial.println(yellow1Val); 
-      Serial.print("force reading (green2): "); // Debug statement
-      Serial.println(green2Val); 
-      Serial.print("force reading (white3): "); // Debug statement
-      Serial.println(white3Val); 
-      Serial.print("interrupt pin (2)"); // Debug statement
+      Serial.print("force reading (heelSensor): "); // Debug statement
+      Serial.println(heelSensorVal); 
+      // Serial.print("force reading (yellow1): "); // Debug statement
+      // Serial.println(yellow1Val); 
+      // Serial.print("force reading (green2): "); // Debug statement
+      // Serial.println(green2Val); 
+      Serial.print("force reading (frontBoxSensor): "); // Debug statement
+      Serial.println(frontBoxSensorVal); 
+      Serial.print("interrupt pin (2): "); // Debug statement
       int interruptPin = 2;
       int statusInterrupt = digitalRead(interruptPin);
       Serial.println(statusInterrupt); 
@@ -90,19 +90,18 @@
 //       }
       Serial.print("debugInterrupCounter: "); // Debug statement
       Serial.println(debugInterruptCounter, DEC); //print x to serial monitor
-      delay(1000);
       // Serial.print("; increment number: "); // Debug statement
       // Serial.println(debugInterruptCounter, DEC); //print x to serial monitor
+      delay(500);
     }
 
     // Interrupt service routine for interrupt 0
     void readFootPosition() {
       // Remove debug counter later
       debugInterruptCounter++;
-
       // Get a quick reading of all of the foot sensors to get an understanding of the state
-      blue0Val = digitalRead(blue0); // BOX SENSOR
-      yellow1Val = digitalRead(yellow1);
-      green2Val = digitalRead(green2);
-      white3Val = digitalRead(white3); //  HEEL SENSOR
+      heelSensorVal = digitalRead(heelSensor); // BOX SENSOR
+      // yellow1Val = digitalRead(yellow1);
+      // green2Val = digitalRead(green2);
+      frontBoxSensorVal = digitalRead(frontBoxSensor); //  HEEL SENSOR
     }
