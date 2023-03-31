@@ -51,6 +51,8 @@ int ballSensor = 12;
 int lowerBoxSensor = 10; // interruptable event
 int higherBoxSensor = 13; 
 
+String lastState = "invalid";
+
 // These variables are modified in the ISR, declare as volatile to make sure they are updated correctly
 volatile int heelSensorVal = 0;
 volatile int ballSensorVal = 0;
@@ -63,7 +65,25 @@ volatile int higherBoxSensorVal = 0;
 int interruptPin = 2;
 int statusInterrupt = 0;
 
+////////////////////////////////////////////
+// TIMER VARIABLES
+///////////////////////////////////////////
+unsigned long sessionStartTime = 0;
+unsigned long sessionEndTime = 0;
+unsigned long sessionOverallTime = 0;
+
+unsigned long repStartTime = 0;
+unsigned long repEndTime = 0;
+unsigned long repOverallTime = 0;
+
     void setup() {
+      // change clock prescaler from 64 to 256
+      // do this by changing the Clock Select Bits 2:0 in the Timer/Counter 0 Control
+      // register B
+      TCCR0B |= _BV(CS02);
+      TCCR0B &= ~_BV(CS01);
+      TCCR0B &= ~_BV(CS00);
+      // setup the serial momitor
       Serial.begin(9600);
 
       pinMode(heelSensor, INPUT); 
@@ -136,8 +156,13 @@ int statusInterrupt = 0;
           {
             startButtonSelected = true;
             lcd.clear();
-            // START TIMER FOR THE WHOLE SESSION UNTIL THEY HAVE COMPLETED REPS
-            // TODO:
+            
+            // EVENT #1: OVERALL SESSION TIME (START: USER PRESSES UP, END: FLAT FOOT POSITION AFTER SELECTED REP COUNT)
+            // start longest timer where more concurrent events will happen within
+            sessionStartTime = millis();
+            Serial.print("sessionStartTime = ");
+            Serial.print(sessionStartTime*4); // multiplied to rescale back to normal time
+            Serial.println(" ms");
             break;
           }
         }
@@ -160,22 +185,60 @@ int statusInterrupt = 0;
   
       if(heelSensorVal && ballSensorVal && !lowerBoxSensorVal && !higherBoxSensorVal) { // flat foot
         Serial.println("Flat");
+        // If the last rep has been completed (TODO: write logic for that) get the time and print it
+        
+        // First print the session end time
+        sessionEndTime = millis();
+        Serial.print("sessionEndTime = ");
+        Serial.print(sessionEndTime*4); // multiplied to rescale back to normal time
+        Serial.println(" ms");
+
+        // Get overall session time
+        sessionOverallTime = sessionEndTime - sessionStartTime; 
+        Serial.print("sessionOverallTime = ");
+        Serial.print(sessionOverallTime*4); // multiplied to rescale back to normal time
+        Serial.println(" ms");
+
+        lastState = "flat";
 
       } else if (!heelSensorVal && ballSensorVal && !lowerBoxSensorVal && !higherBoxSensorVal) { // demi
         Serial.println("Demi-pointe");
 
+        if(lastState == "flat") {
+          // EVENT #2: REP TIME (START: DEMI TO END: FULL HOLD)
+          repStartTime = millis();
+          Serial.print("repStartTime = ");
+          Serial.print(repStartTime*4); // multiplied to rescale back to normal time
+          Serial.println(" ms");
+        }
+        lastState = "demi";
+
       } else if(!heelSensorVal && !ballSensorVal && lowerBoxSensorVal && !higherBoxSensorVal) { // lower box
+        if(lastState == "full") {
+          repEndTime = millis();
+          Serial.print("repEndTime = ");
+          Serial.print(repEndTime*4); // multiplied to rescale back to normal time
+          Serial.println(" ms");
+
+          repOverallTime = repEndTime - repStartTime;
+          Serial.print("repOverallTime = ");
+          Serial.print(repOverallTime*4); // multiplied to rescale back to normal time
+          Serial.println(" ms");
+
+        }
         Serial.println("Lower box - almost there!");
+        lastState = "lower";
 
       } else if(!heelSensorVal && !ballSensorVal && lowerBoxSensorVal && higherBoxSensorVal) { // full box
         Serial.println("Full box");
+        lastState = "higher";
 
       } else {
         Serial.println("Keep Trying :)");
-
+        lastState = "invalid";
       } 
     }
-    
+
     void interruptHandler() {
       readFootPosition();
     }
@@ -187,5 +250,3 @@ int statusInterrupt = 0;
       lowerBoxSensorVal = digitalRead(lowerBoxSensor);
       higherBoxSensorVal = digitalRead(higherBoxSensor);
     }
-
-    void 
