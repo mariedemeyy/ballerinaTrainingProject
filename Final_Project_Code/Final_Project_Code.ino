@@ -15,6 +15,7 @@ int adc_key_in  = 0;
 #define btnNONE   5
 bool repCountSelected = false;
 bool startButtonSelected = false;
+bool holdTimeSelected = false;
 
 // read the buttons
 int read_LCD_buttons()
@@ -45,6 +46,9 @@ int read_LCD_buttons()
 ///////////////////////////////////////////
 
 int selectedRepCount;
+unsigned long holdTime;
+int repCounter = 0;
+bool onTrackForRep = false;
 
 int heelSensor = 11; // interruptable event
 int ballSensor = 12;
@@ -76,6 +80,10 @@ unsigned long repStartTime = 0;
 unsigned long repEndTime = 0;
 unsigned long repOverallTime = 0;
 
+unsigned long boxStartTime = 0;
+unsigned long boxEndTime = 0;
+unsigned long boxOverallTime = 0;
+
     void setup() {
       // change clock prescaler from 64 to 256
       // do this by changing the Clock Select Bits 2:0 in the Timer/Counter 0 Control
@@ -97,14 +105,56 @@ unsigned long repOverallTime = 0;
       lcd.print("Place foot");
       lcd.setCursor(0,1);
       lcd.print("on board!");
-      delay(1000); // DEMO: change longer for demo
+      delay(250); // DEMO: change longer for demo
       lcd.clear();
 
+      // Ask user their desired box hold time
+      lcd.setCursor(0,0);
+      lcd.print("Desired hold");
+      lcd.setCursor(0,1);
+      lcd.print("time?");
+      delay(250); // DEMO: change longer for demo
+      lcd.clear();
+
+      lcd.setCursor(0,0);
+      lcd.print("UP: 2s");
+      lcd.setCursor(8,0);
+      lcd.print("DOWN: 4s");
+
+      // Wait for user to select hold time
+      while(holdTimeSelected == false) {
+        lcd_key = read_LCD_buttons();  // read the buttons
+        switch (lcd_key)
+        {
+          case btnUP:
+          {
+            holdTimeSelected = true;
+            holdTime = 2000/4; // convert to actual wordly milliseconds
+            lcd.clear();
+            lcd.setCursor(0,0);
+            lcd.print("2s selected");
+            Serial.println("Up selected, 2s");
+            break;
+          }
+          case btnDOWN:
+          {
+            holdTimeSelected = true;
+            holdTime = 4000/4; // convert to actual wordly milliseconds
+            lcd.clear();
+            lcd.setCursor(0,0);
+            lcd.print("4s selected");
+            Serial.println("Down selected, 4s");
+            break;
+          }
+        } 
+      }
+      // Ask user how many reps they want to complete
+      lcd.clear();
       lcd.setCursor(0,0);
       lcd.print("How many ");
       lcd.setCursor(0,1);
       lcd.print("reps?");
-      delay(1000); // DEMO: change longer for demo
+      delay(250); // DEMO: change longer for demo
       lcd.clear();
 
       lcd.setCursor(0,0);
@@ -140,19 +190,19 @@ unsigned long repOverallTime = 0;
         } 
       }
 
-      delay(1000); // DEMO
+      delay(250); // DEMO
       lcd.clear();
       lcd.setCursor(0,0);
-      lcd.print("Hit up to");
+      lcd.print("Hit select");
       lcd.setCursor(0,1);
-      lcd.print("start!!");
+      lcd.print("to start!!");
       
       // Wait for user to select start
       while(startButtonSelected == false) {
         lcd_key = read_LCD_buttons();  // read the buttons
         switch (lcd_key)
         {         
-          case btnUP:
+          case btnSELECT:
           {
             startButtonSelected = true;
             lcd.clear();
@@ -187,17 +237,27 @@ unsigned long repOverallTime = 0;
         Serial.println("Flat");
         // If the last rep has been completed (TODO: write logic for that) get the time and print it
         
-        // First print the session end time
-        sessionEndTime = millis();
-        Serial.print("sessionEndTime = ");
-        Serial.print(sessionEndTime*4); // multiplied to rescale back to normal time
-        Serial.println(" ms");
+        if(lastState == "demi" && onTrackForRep) {
+          // If the total number of reps have been reached (n-1), end the sessionTimer
+          if(repCounter == selectedRepCount - 1) {
+            // EVENT #1 END
+            sessionEndTime = millis();
+            Serial.print("sessionEndTime = ");
+            Serial.print(sessionEndTime*4); // multiplied to rescale back to normal time
+            Serial.println(" ms");
 
-        // Get overall session time
-        sessionOverallTime = sessionEndTime - sessionStartTime; 
-        Serial.print("sessionOverallTime = ");
-        Serial.print(sessionOverallTime*4); // multiplied to rescale back to normal time
-        Serial.println(" ms");
+            // Get overall session time
+            sessionOverallTime = sessionEndTime - sessionStartTime; 
+            Serial.print("sessionOverallTime = ");
+            Serial.print(sessionOverallTime*4); // multiplied to rescale back to normal time
+            Serial.println(" ms");            
+          }
+          repCounter++;
+          onTrackForRep = false;
+
+        } else {
+          onTrackForRep = false;
+        }
 
         lastState = "flat";
 
@@ -205,16 +265,37 @@ unsigned long repOverallTime = 0;
         Serial.println("Demi-pointe");
 
         if(lastState == "flat") {
+          onTrackForRep = true;
           // EVENT #2: REP TIME (START: DEMI TO END: FULL HOLD)
           repStartTime = millis();
           Serial.print("repStartTime = ");
           Serial.print(repStartTime*4); // multiplied to rescale back to normal time
           Serial.println(" ms");
+        } else if(lastState == ("lower") || ("higher")) {
+          onTrackForRep = true;
+          // EVENT #3 END
+          boxEndTime = millis();
+          boxOverallTime = boxEndTime - boxStartTime;
+          if((boxOverallTime*4) > holdTime) {
+            lcd.clear();
+            lcd.setCursor(0,0);
+            lcd.print("Successful");
+            lcd.setCursor(0,1);
+            lcd.print("hold!!");
+          }
+        } else {
+          onTrackForRep = false;
         }
+        
         lastState = "demi";
 
       } else if(!heelSensorVal && !ballSensorVal && lowerBoxSensorVal && !higherBoxSensorVal) { // lower box
-        if(lastState == "full") {
+        if(lastState == "demi") {
+          onTrackForRep = true;
+        } else if(lastState == "higher") {
+          onTrackForRep = true;
+        } else if(lastState == "full") {
+          // EVENT #2: END
           repEndTime = millis();
           Serial.print("repEndTime = ");
           Serial.print(repEndTime*4); // multiplied to rescale back to normal time
@@ -224,13 +305,25 @@ unsigned long repOverallTime = 0;
           Serial.print("repOverallTime = ");
           Serial.print(repOverallTime*4); // multiplied to rescale back to normal time
           Serial.println(" ms");
-
+        } else {
+          onTrackForRep = false;
         }
+
         Serial.println("Lower box - almost there!");
         lastState = "lower";
 
       } else if(!heelSensorVal && !ballSensorVal && lowerBoxSensorVal && higherBoxSensorVal) { // full box
         Serial.println("Full box");
+
+        if(lastState == ("lower") || ("demi")) {
+          onTrackForRep = true;
+        } else if(lastState == "lower") {
+          // EVENT #3 (START: FULL TO END: DEMI)
+          boxStartTime = millis();
+        } else {
+          onTrackForRep = false;
+        }
+
         lastState = "higher";
 
       } else {
