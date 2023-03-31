@@ -4,8 +4,8 @@
 #include <LiquidCrystal.h>
 // 4 data line LCD display
 // rs = 8; register select pin controls where in the LCD's memory you are writing to
-// en = 9; enable writing to the register to power the LCD
-// 4 digital pins
+// en = 9; enable writing to the register 
+// 4 digital pins to power the LCD
 
 LiquidCrystal lcd(8, 9, 4, 5, 6, 7);
 
@@ -113,7 +113,7 @@ unsigned long boxOverallTime = 0;
       lcd.print("Place foot");
       lcd.setCursor(0,1);
       lcd.print("on board!");
-      delay(250); // DEMO: change longer for demo
+      delay(1000); // DEMO: change longer for demo
       lcd.clear();
 
       // Ask user their desired box hold time
@@ -121,7 +121,7 @@ unsigned long boxOverallTime = 0;
       lcd.print("Desired hold");
       lcd.setCursor(0,1);
       lcd.print("time?");
-      delay(250); // DEMO: change longer for demo
+      delay(1000); // DEMO: change longer for demo
       lcd.clear();
 
       lcd.setCursor(0,0);
@@ -162,7 +162,7 @@ unsigned long boxOverallTime = 0;
       lcd.print("How many ");
       lcd.setCursor(0,1);
       lcd.print("reps?");
-      delay(250); // DEMO: change longer for demo
+      delay(1000); // DEMO: change longer for demo
       lcd.clear();
 
       lcd.setCursor(0,0);
@@ -198,7 +198,7 @@ unsigned long boxOverallTime = 0;
         } 
       }
 
-      delay(250); // DEMO
+      delay(1000); // DEMO
       lcd.clear();
       lcd.setCursor(0,0);
       lcd.print("Hit select");
@@ -243,10 +243,7 @@ unsigned long boxOverallTime = 0;
       statusInterrupt = digitalRead(interruptPin);
       Serial.print("Interrupt pin (2): "); // Debug statement
       Serial.println(statusInterrupt); // Debug statement 
-      // TODO: add some sort of logic that checks if its the very start of the session, and goes to read the pins using readFootPosition()
-      if(heelSensorVal == HIGH) {
-        Serial.println("CHAOS DEBUG");
-      }
+
       if(heelSensorVal && ballSensorVal && !lowerBoxSensorVal && !higherBoxSensorVal) { // flat foot
         Serial.println("Flat");
         // If the last rep has been completed (TODO: write logic for that) get the time and print it
