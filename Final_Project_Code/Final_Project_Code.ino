@@ -2,6 +2,11 @@
 // LCD VARIABLES
 ///////////////////////////////////////////
 #include <LiquidCrystal.h>
+// 4 data line LCD display
+// rs = 8; register select pin controls where in the LCD's memory you are writing to
+// en = 9; enable writing to the register to power the LCD
+// 4 digital pins
+
 LiquidCrystal lcd(8, 9, 4, 5, 6, 7);
 
 // define some values used by the panel and buttons
@@ -35,7 +40,7 @@ int read_LCD_buttons()
 ////////////////////////////////////////////
 // DEBUG VARIABLES (REMOVE LATER)
 ///////////////////////////////////////////
-
+volatile int interruptdebugcounter = 0;
 // int forceDebugPin0 = A0; // Analog Pin 0 that we will use to debug our circuit 
 // int forceDebugPin1 = A1; // Analog Pin 1 that we will use to debug our circuit 
 // int forceDebugPin2 = A2; // Analog Pin 2 that we will use to debug our circuit 
@@ -85,12 +90,15 @@ unsigned long boxEndTime = 0;
 unsigned long boxOverallTime = 0;
 
     void setup() {
-      // change clock prescaler from 64 to 256
-      // do this by changing the Clock Select Bits 2:0 in the Timer/Counter 0 Control
-      // register B
-      TCCR0B |= _BV(CS02);
-      TCCR0B &= ~_BV(CS01);
-      TCCR0B &= ~_BV(CS00);
+      // Change clock prescaler from 64 to 256
+      // Do this by changing the Clock Select Bits 2:0 in the Timer/Counter 0 Control
+      // Register B
+      // ALSO, use _BV function that is part of the avr-libc library - takes number as argument and converts
+      // to appropriate bit mask
+      TCCR0B |= _BV(CS02); // OR with 1 to get 1 
+      TCCR0B &= ~_BV(CS01); // AND with 0 to get 0 
+      TCCR0B &= ~_BV(CS00); // AND with 0 to get 0
+
       // setup the serial momitor
       Serial.begin(9600);
 
@@ -213,26 +221,32 @@ unsigned long boxOverallTime = 0;
             Serial.print("sessionStartTime = ");
             Serial.print(sessionStartTime*4); // multiplied to rescale back to normal time
             Serial.println(" ms");
+            delay(1000);
             break;
           }
         }
       }
 
       // At the end of the setup loop, attach the interrupt (not before though because we don't want to randomly trigger ISR)
-      attachInterrupt(interruptPin, interruptHandler, CHANGE); // will sense changes from 1 to 0 OR 0 to 1 (required for our application)      
+      attachInterrupt(digitalPinToInterrupt(interruptPin), interruptHandler, CHANGE); // will sense changes from 1 to 0 OR 0 to 1 (required for our application)      
     }
     
     void loop() {
       Serial.print("force reading (heelSensor): "); // Debug statement
       Serial.println(heelSensorVal); 
+      Serial.print("force reading (ballSensorVal): "); // Debug statement
+      Serial.println(ballSensorVal); 
       Serial.print("force reading (lowerBoxSensor): "); // Debug statement
       Serial.println(lowerBoxSensorVal); 
-
+      Serial.print("force reading (higherBoxSensor): "); // Debug statement
+      Serial.println(higherBoxSensorVal); 
       statusInterrupt = digitalRead(interruptPin);
       Serial.print("Interrupt pin (2): "); // Debug statement
       Serial.println(statusInterrupt); // Debug statement 
       // TODO: add some sort of logic that checks if its the very start of the session, and goes to read the pins using readFootPosition()
-  
+      if(heelSensorVal == HIGH) {
+        Serial.println("CHAOS DEBUG");
+      }
       if(heelSensorVal && ballSensorVal && !lowerBoxSensorVal && !higherBoxSensorVal) { // flat foot
         Serial.println("Flat");
         // If the last rep has been completed (TODO: write logic for that) get the time and print it
@@ -252,7 +266,15 @@ unsigned long boxOverallTime = 0;
             Serial.print(sessionOverallTime*4); // multiplied to rescale back to normal time
             Serial.println(" ms");            
           }
+
           repCounter++;
+          lcd.clear();
+          lcd.setCursor(5,0);
+          lcd.write("rep");
+          lcd.setCursor(9,0);
+          char numString[2];
+          sprintf(numString, "%d", repCounter);
+          lcd.write(numString);
           onTrackForRep = false;
 
         } else {
@@ -327,12 +349,17 @@ unsigned long boxOverallTime = 0;
         lastState = "higher";
 
       } else {
-        Serial.println("Keep Trying :)");
+        Serial.println("Invalid Position");
         lastState = "invalid";
       } 
+      // Serial.print("interruptdebugCounter!!!");
+      // lowerBoxSensorVal = digitalRead(lowerBoxSensor);
+      // Serial.println(lowerBoxSensorVal);
+      // Serial.println(interruptdebugcounter);
     }
 
     void interruptHandler() {
+      // interruptdebugcounter++;
       readFootPosition();
     }
 
